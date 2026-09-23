@@ -815,7 +815,7 @@ function build(archetype: Archetype, text: string, x: Extracted): Built {
             ? `${objects.filter((o) => !o.is_static).map((o) => `${o.label} (${sig(Number(o.mass))} kg)`).join(" and ")} ${multi ? "are" : "is"} released from rest ${sig(h)} m above the ground${g !== 9.81 ? ` with g = ${g} m/s²` : ""}.`
             : `${obj.label} (${sig(Number(obj.mass))} kg) is launched at ${sig(speed)} m/s, ${angle}° above horizontal, from ${hasPlatform ? `the edge of a ${sig(h)} m ${platformWords.exec(t)?.[0] ?? "cliff"}` : h > 0 ? `${sig(h)} m up` : "the ground"}.`,
         scenario: {
-          metadata: { name: archetype === "drop" ? (multi ? `Dropping ${named.map((n) => n.obj.label.toLowerCase()).join(" and ")}` : `Dropped ${obj.label.toLowerCase()}`) : `Launched ${obj.label.toLowerCase()}` },
+          metadata: { name: archetype === "drop" ? (multi ? `Dropping ${named.map((n) => n.obj.label.toLowerCase()).join(" and ")}` : `Dropped ${(obj.label ?? kindName).toLowerCase()}`) : `Launched ${(obj.label ?? kindName).toLowerCase()}` },
           environment: env,
           objects,
         },
