@@ -8,7 +8,7 @@ const CATEGORIES: Preset["category"][] = ["Mechanics", "Energy", "Oscillations",
 export function LibraryDialog() {
   const open = useStore((s) => s.libraryOpen);
   const setOpen = useStore((s) => s.setLibraryOpen);
-  const load = useStore((s) => s.loadScenario);
+  const open_ = useStore((s) => s.openScenario);
   const saved = useStore((s) => s.saved);
   const saveCurrent = useStore((s) => s.saveCurrent);
   const deleteSaved = useStore((s) => s.deleteSaved);
@@ -68,8 +68,7 @@ export function LibraryDialog() {
                 try {
                   const parsed = parseScenario(JSON.parse(await f.text()));
                   if (!parsed.ok) throw new Error(parsed.errors.slice(0, 2).join("; "));
-                  pick(() => load(parsed.scenario, { frame: true, interpretation: null }));
-                  showToast(`Imported “${parsed.scenario.metadata.name}”.`);
+                  pick(() => open_(parsed.scenario, "from your file"));
                 } catch (err) {
                   showToast(`That file isn't a valid scenario: ${(err as Error).message}`);
                 }
@@ -80,7 +79,7 @@ export function LibraryDialog() {
             <ul className="saved-list">
               {saved.map((s) => (
                 <li key={s.id}>
-                  <button type="button" className="link-button" onClick={() => pick(() => load(s.scenario, { frame: true, interpretation: null }))}>
+                  <button type="button" className="link-button" onClick={() => pick(() => open_(s.scenario, "from your saved scenarios"))}>
                     {s.name}
                   </button>
                   <span className="muted small">{new Date(s.at).toLocaleDateString()}</span>
@@ -102,7 +101,7 @@ export function LibraryDialog() {
               <h3 className="panel-title">{cat}</h3>
               <div className="preset-grid">
                 {items.map((p) => (
-                  <button key={p.id} type="button" className="preset-card" onClick={() => pick(() => load(presetScenario(p.id), { frame: true, interpretation: null }))}>
+                  <button key={p.id} type="button" className="preset-card" onClick={() => pick(() => open_(presetScenario(p.id), "from the library"))}>
                     <strong>{p.title}</strong>
                     <span className="muted small">{p.summary}</span>
                   </button>

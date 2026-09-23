@@ -63,12 +63,14 @@ function SceneCanvas({ variantKey, theme, linked }: { variantKey: VariantKey; th
     sv.setScenario(variant.validation.resolved, variant.recording);
   }, [variant?.validation.resolved, variant?.recording]);
 
+  // Re-frame only on explicit requests (new scenario loaded, its first recording landed, or the
+  // Frame button) — never on parameter tweaks, so the camera doesn't jump while you drag a slider.
   useEffect(() => {
     const sv = viewRef.current;
-    if (!sv) return;
+    if (!sv || !useStore.getState().variants[variantKey]) return;
     sv.frame();
     if (linked) for (const [k, other] of views) if (k !== variantKey) other.copyCamera(sv);
-  }, [frameRequest, !!variant?.recording, variant?.scenario.metadata.name]);
+  }, [frameRequest]);
 
   useEffect(() => viewRef.current?.setView(view), [view]);
   useEffect(() => viewRef.current?.setSelected(editing === variantKey ? selectedId : null), [selectedId, editing]);

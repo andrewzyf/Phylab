@@ -63,6 +63,8 @@ function InterpretationCard({ result, latest }: { result: InterpretResult; lates
           <span className="badge badge-ai">
             <Icon name="sparkle" size={12} /> {result.model ?? "Claude"}
           </span>
+        ) : result.source === "library" ? (
+          <span className="badge">Scenario details</span>
         ) : (
           <span className="badge">Offline interpreter</span>
         )}

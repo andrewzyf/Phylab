@@ -34,7 +34,8 @@ export interface InterpretResult {
   interpretation: Interpretation;
   scenario: Scenario | null;
   suggested_variations: Variation[];
-  source: "ai" | "offline";
+  /** "library" = loaded from presets, saved scenarios, history, share links or imports. */
+  source: "ai" | "offline" | "library";
   model?: string;
   issues?: Issue[];
   /** Why the offline parser was used instead of the AI, if it was. */

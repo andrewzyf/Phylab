@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   analyzeScenario,
   applyChanges,
+  describeScenario,
   checkPredictions,
   computeMetrics,
   DEFAULT_DIMENSIONS,
@@ -118,6 +119,8 @@ interface State {
   frameRequest: number;
 
   init(): Promise<void>;
+  /** Load a scenario that didn't come from the chat, and post a card describing it in the chat. */
+  openScenario(scenario: Scenario, origin: string): void;
   loadScenario(scenario: Scenario, opts?: { variant?: VariantKey; interpretation?: InterpretResult | null; autoplay?: boolean; keepTime?: boolean; frame?: boolean }): void;
   updateScenario(changes: Change[], variant?: VariantKey): void;
   applyVariation(v: Variation): void;
@@ -145,6 +148,8 @@ interface State {
   deleteObject(id: string): void;
   moveObject(id: string, position: Vec3): void;
   setMaterial(id: string, material: string): void;
+  addForce(objectId: string, type: "applied_force" | "impulse"): void;
+  removeForce(forceId: string): void;
   setRightTab(t: RightTab): void;
   setMobileTab(t: MobileTab): void;
   setLibraryOpen(open: boolean): void;
@@ -234,13 +239,29 @@ export const useStore = create<State>()((set, get) => ({
     set({ history: loadJson<RunEntry[]>(HISTORY_KEY, []).slice(0, 30), saved: loadJson<SavedScenario[]>(SAVED_KEY, []) });
     const shared = window.location.hash ? await decodeScenario(window.location.hash) : null;
     if (shared) {
-      get().loadScenario(shared, { frame: true });
-      get().showToast(`Loaded shared scenario “${shared.metadata.name}”.`);
+      get().openScenario(shared, "from a share link");
       history.replaceState(null, "", window.location.pathname + window.location.search);
     } else {
       get().loadScenario(presetScenario(PRESETS[0].id), { frame: true });
     }
     set({ health: await fetchHealth() });
+  },
+
+  openScenario(scenario, origin) {
+    get().loadScenario(scenario, { frame: true, interpretation: null });
+    const v = get().variants.A;
+    if (!v) return;
+    const interpretation = describeScenario(v.validation.resolved, v.analysis);
+    const result: InterpretResult = {
+      status: "ready",
+      reply: `Loaded “${scenario.metadata.name}” ${origin}. Press Run, or ask me to change something.`,
+      interpretation,
+      scenario,
+      suggested_variations: [],
+      source: "library",
+      issues: v.validation.issues,
+    };
+    set((s) => ({ chat: [...s.chat, { id: uid(), role: "assistant", text: result.reply, result, at: Date.now() }], interpretation: result }));
   },
 
   loadScenario(scenario, opts = {}) {
@@ -400,9 +421,14 @@ export const useStore = create<State>()((set, get) => ({
     const s = get();
     const next = on ?? !s.compare;
     if (next) {
-      if (!s.variants.B && s.variants.A) get().loadScenario(structuredClone(s.variants.A.scenario), { variant: "B", keepTime: true });
+      if (!s.variants.B && s.variants.A) get().loadScenario(structuredClone(s.variants.A.scenario), { variant: "B", keepTime: true, frame: true });
       set({ compare: true, editing: "B", rightTab: "compare" });
-    } else set({ compare: false, editing: "A" });
+      // The viewport just split in two: re-frame once the layout has settled.
+      setTimeout(() => get().requestFrame(), 50);
+    } else {
+      set({ compare: false, editing: "A" });
+      setTimeout(() => get().requestFrame(), 50);
+    }
   },
   copyAToB() {
     const a = get().variants.A;
@@ -433,10 +459,7 @@ export const useStore = create<State>()((set, get) => ({
   },
   restoreRun(runId) {
     const run = get().history.find((r) => r.id === runId);
-    if (run) {
-      get().loadScenario(run.scenario, { frame: true, interpretation: null });
-      get().showToast(`Restored “${run.name}”.`);
-    }
+    if (run) get().openScenario(run.scenario, "from your run history");
   },
 
   async requestExplanation(question) {
@@ -521,6 +544,31 @@ export const useStore = create<State>()((set, get) => ({
       const suggested = suggestMass(o.type, after.dims, m.density, after.hollow);
       get().showToast(`Looks like ${m.name.replace("_", " ")}: μ ≈ ${m.friction}, e ≈ ${m.restitution}. A ${after.hollow ? "hollow" : "solid"} one this size would weigh about ${suggested.toPrecision(3)} kg — use “Suggested mass” to apply it.`);
     }
+  },
+  addForce(objectId, type) {
+    const s = get();
+    const v = s.variants[s.editing];
+    if (!v) return;
+    const base = type === "impulse" ? "kick" : "push";
+    let id = `${base}_${objectId}`;
+    for (let i = 2; v.scenario.forces.some((f) => f.id === id); i++) id = `${base}_${objectId}_${i}`;
+    const o = v.validation.resolved.objects.find((x) => x.id === objectId);
+    const magnitude = Number(((o?.mass ?? 1) * (type === "impulse" ? 2 : 5)).toPrecision(2));
+    const next = makeScenario({
+      ...v.scenario,
+      forces: [
+        ...v.scenario.forces,
+        { id, type, magnitude, direction: [1, 0, 0], applies_to: [objectId], start_time: 0, end_time: type === "applied_force" ? Math.min(2, v.scenario.environment.simulation_duration) : null },
+      ],
+    });
+    get().loadScenario(next, { variant: s.editing, keepTime: true });
+    get().showToast(type === "impulse" ? `Added a ${magnitude} N·s kick along +x — adjust it under “${id}”.` : `Added a ${magnitude} N push along +x for 2 s — adjust it under “${id}”.`);
+  },
+  removeForce(forceId) {
+    const s = get();
+    const v = s.variants[s.editing];
+    if (!v) return;
+    get().loadScenario(makeScenario({ ...v.scenario, forces: v.scenario.forces.filter((f) => f.id !== forceId) }), { variant: s.editing, keepTime: true });
   },
   setRightTab: (t) => set({ rightTab: t }),
   setMobileTab: (t) => set({ mobileTab: t }),

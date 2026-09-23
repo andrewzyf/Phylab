@@ -148,6 +148,8 @@ export function ParamsPanel() {
   const setEditing = useStore((s) => s.setEditing);
   const selectedId = useStore((s) => s.selectedId);
   const select = useStore((s) => s.select);
+  const addForce = useStore((s) => s.addForce);
+  const removeForce = useStore((s) => s.removeForce);
   const colors = useMemo(() => Object.fromEntries((v?.validation.resolved.objects ?? []).map((o) => [o.id, o.color])), [v?.validation.resolved]);
   const groups = useMemo(() => (v ? paramGroups(v.scenario, colors) : []), [v?.scenario, colors]);
   const [open, setOpen] = useState<Record<string, boolean>>({});
@@ -194,6 +196,21 @@ export function ParamsPanel() {
             {g.params.map((p) => (
               <ParamRow key={p.path} spec={p} />
             ))}
+            {v.validation.resolved.objects.some((o) => o.id === g.id && o.dynamic) ? (
+              <div className="chips">
+                <button type="button" className="chip" onClick={() => addForce(g.id, "applied_force")}>
+                  <Icon name="plus" size={12} /> Add force
+                </button>
+                <button type="button" className="chip" onClick={() => addForce(g.id, "impulse")}>
+                  <Icon name="plus" size={12} /> Add impulse
+                </button>
+              </div>
+            ) : null}
+            {v.scenario.forces.some((f) => f.id === g.id) ? (
+              <button type="button" className="link-button small" onClick={() => removeForce(g.id)}>
+                Remove this force
+              </button>
+            ) : null}
           </div>
         </details>
       ))}

@@ -209,6 +209,8 @@ export class SceneView {
     if (theme) this.setTheme(theme);
 
     const el = this.renderer.domElement;
+    // Right-click (without dragging) selects an object and opens its parameters, like the spec's builder.
+    el.addEventListener("contextmenu", (e) => e.preventDefault());
     el.addEventListener("pointerdown", (e) => (this.down = { x: e.clientX, y: e.clientY }));
     el.addEventListener("pointerup", (e) => {
       if (!this.down) return;

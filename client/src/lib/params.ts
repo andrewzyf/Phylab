@@ -115,6 +115,9 @@ export function paramGroups(s: Scenario, objectColors: Record<string, string> = 
     if (f.type === "mutual_gravity") params.push(num(`${p}.magnitude`, "G", f.magnitude || 6.674e-11, "", 1e-12, 1e-8, 1e-13, "log"));
     else if (f.type === "drag") params.push(num(`${p}.magnitude`, "Coefficient", f.magnitude, "", 0, Math.max(5, f.magnitude * 5), 0.001));
     else params.push(num(`${p}.magnitude`, f.type === "impulse" ? "Impulse" : "Magnitude", f.magnitude, f.type === "impulse" ? "N·s" : "N", 0, Math.max(100, Math.abs(f.magnitude) * 5), 0.1));
+    if (f.type === "applied_force" || f.type === "impulse") {
+      (["x", "y", "z"] as const).forEach((a, i) => params.push(num(`${p}.direction.${i}`, `Direction ${a}`, f.direction[i], "", -1, 1, 0.01)));
+    }
     params.push(num(`${p}.start_time`, "Starts at", f.start_time, "s", 0, env.simulation_duration, 0.05));
     if (f.type === "applied_force" && f.end_time !== null && f.end_time !== undefined) params.push(num(`${p}.end_time`, "Ends at", f.end_time, "s", 0, env.simulation_duration, 0.05));
     groups.push({ id: f.id, title: f.id, subtitle: f.type.replace("_", " "), params });

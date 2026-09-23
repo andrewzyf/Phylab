@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { accelerationAt, bodyStateAt, energyAt, vec, type PredictionCheck } from "@physicslab/shared";
 import { useThrottledTime } from "../hooks";
-import { fmt, fmtUnit, fmtVec, signed } from "../lib/format";
+import { fmt, fmtUnit, fmtVec, pctDiff, signed } from "../lib/format";
 import { objectLabels, useStore } from "../store";
 import { Icon } from "./Icon";
 
@@ -36,7 +36,7 @@ function LiveStats() {
         <div className="stat-tile">
           <div className="stat-label">Total energy</div>
           <div className="stat-value">{fmt(e.total)} J</div>
-          <div className="stat-delta muted">{signed(e.total - e0)} J since t = 0</div>
+          <div className="stat-delta muted">{Math.abs(e.total - e0) < 1e-6 * Math.max(1, Math.abs(e0)) ? "unchanged" : `${signed(e.total - e0)} J`} since t = 0</div>
         </div>
       </div>
       <table className="stats-table">
@@ -113,16 +113,16 @@ export function PredictionsTable() {
         <tbody>
           {v.checks.map((c) => {
             const p = c.prediction;
-            const diff = c.error === null ? null : p.unit === "%" ? `${signed(c.error, 2)} pts` : `${signed(c.error * 100, 2)}%`;
+            const diff = c.error === null ? null : p.unit === "%" ? `${signed(c.error, 2)} pts` : pctDiff(c.error);
             return (
               <tr key={p.id} onClick={() => setOpen(open === p.id ? null : p.id)} className={open === p.id ? "open" : ""}>
                 <td>
                   {p.label}
                   {open === p.id ? <div className="formula">{p.formula}</div> : null}
                 </td>
-                <td>{fmtUnit(p.value, p.unit)}</td>
+                <td>{fmtUnit(p.value, p.unit, 4)}</td>
                 <td>
-                  {p.measure ? (c.measured === null ? (v.status === "ready" ? "didn't happen" : "…") : fmtUnit(c.measured, p.unit)) : "—"}
+                  {p.measure ? (c.measured === null ? (v.status === "ready" ? "didn't happen" : "…") : fmtUnit(c.measured, p.unit, 4)) : "—"}
                   {diff ? <div className="muted small">{diff}</div> : null}
                 </td>
                 <td>{p.measure ? checkIcon(c) : null}</td>
