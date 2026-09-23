@@ -73,16 +73,8 @@ export const GRAVITY_PRESETS: Record<string, number> = {
   space: 0,
 };
 
-export const PALETTE = [
-  "#4f8cff",
-  "#ff6b4a",
-  "#3fc47a",
-  "#f5b83d",
-  "#b06cff",
-  "#27c2d6",
-  "#ff5fa2",
-  "#9ccc3a",
-];
+/** Default colours for moving objects: a colour-blind-validated categorical order (also used by the charts). */
+export const PALETTE = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#4a3aa7", "#e34948"];
 
 export const STATIC_COLOR = "#8792a2";
 export const RAMP_COLOR = "#a58b6f";

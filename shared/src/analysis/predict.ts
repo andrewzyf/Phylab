@@ -42,6 +42,8 @@ export interface Analysis {
 }
 
 const f3 = (x: number) => `${sig(x, 3)}`;
+/** Format a number that will be squared or multiplied: negatives get parentheses. */
+const p3 = (x: number) => (x < 0 ? `(${f3(x)})` : f3(x));
 
 function roundFactor(o: ResolvedObject): number | null {
   if (o.type === "sphere") return o.hollow ? 2 / 3 : 2 / 5;
@@ -368,7 +370,7 @@ export function analyzeScenario(rs: ResolvedScenario): Analysis {
         formula:
           vy === 0
             ? `t = √(2h/g) = √(2 × ${f3(h)} / ${f3(g)}) = ${f3(tf)} s`
-            : `t = (v_y + √(v_y² + 2gh)) / g = (${f3(vy)} + √(${f3(vy)}² + 2 × ${f3(g)} × ${f3(h)})) / ${f3(g)} = ${f3(tf)} s`,
+            : `t = (v_y + √(v_y² + 2gh)) / g = (${f3(vy)} + √(${p3(vy)}² + 2 × ${f3(g)} × ${f3(h)})) / ${f3(g)} = ${f3(tf)} s`,
         measure: { kind: "first_contact_time", object: o.id, other: GROUND_ID },
         tolerance: 0.02,
       });
@@ -392,7 +394,7 @@ export function analyzeScenario(rs: ResolvedScenario): Analysis {
         unit: "m/s",
         formula:
           vh > 1e-3
-            ? `v = √(v_x² + v_y²) = √(${f3(vh)}² + ${f3(vyImpact)}²) = ${f3(vImpact)} m/s`
+            ? `v = √(v_x² + v_y²) = √(${p3(vh)}² + ${p3(vyImpact)}²) = ${f3(vImpact)} m/s`
             : `v = √(v₀² + 2gh) = ${f3(vImpact)} m/s`,
         measure: { kind: "speed_at_first_contact", object: o.id, other: GROUND_ID, gravity: env.gravityVec },
         tolerance: 0.02,
@@ -405,13 +407,14 @@ export function analyzeScenario(rs: ResolvedScenario): Analysis {
           label: `${o.label}: maximum height (centre)`,
           value: hmax,
           unit: "m",
-          formula: `h_max = y₀ + v_y²/(2g) = ${f3(o.position[1])} + ${f3(vy)}²/(2 × ${f3(g)}) = ${f3(hmax)} m`,
+          formula: `h_max = y₀ + v_y²/(2g) = ${f3(o.position[1])} + ${p3(vy)}²/(2 × ${f3(g)}) = ${f3(hmax)} m`,
           measure: { kind: "max_height", object: o.id, up, offset: 0 },
           tolerance: 0.02,
         });
       }
       const e = contactCoefficients(rs, o.id, GROUND_ID).restitution;
-      if (o.type === "sphere" && e > 0.05) {
+      // Only predict the bounce if its apex happens before the run ends.
+      if (o.type === "sphere" && e > 0.05 && tf + (e * Math.abs(vyImpact)) / g < env.duration - 0.05) {
         const bounce = (e * vyImpact) ** 2 / (2 * g);
         predictions.push({
           id: `${o.id}_bounce`,
