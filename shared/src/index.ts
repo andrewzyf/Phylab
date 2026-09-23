@@ -12,3 +12,6 @@ export * from "./analysis/measure";
 export * from "./analysis/predict";
 export * from "./analysis/metrics";
 export * from "./presets";
+export * from "./interpret/types";
+export * from "./interpret/describe";
+export * from "./interpret/offline";
